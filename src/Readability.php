@@ -82,12 +82,12 @@ class Readability
      *
      * @var array
      */
-    private $attempts = [];
+    private $attempts = array();
 
     /**
      * @var array
      */
-    private $defaultTagsToScore = [
+    private $defaultTagsToScore = array(
         'section',
         'h2',
         'h3',
@@ -97,17 +97,17 @@ class Readability
         'p',
         'td',
         'pre',
-    ];
+    );
 
     /**
      * @var array
      */
-    private $alterToDIVExceptions = [
+    private $alterToDIVExceptions = array(
         'div',
         'article',
         'section',
         'p',
-    ];
+    );
 
     /**
      * Readability constructor.
@@ -117,7 +117,7 @@ class Readability
     public function __construct(Configuration $configuration)
     {
         $this->configuration = $configuration;
-        $this->logger = $this->configuration->getLogger();
+        $this->logger        = $this->configuration->getLogger();
     }
 
     /**
@@ -136,7 +136,8 @@ class Readability
         $this->dom = $this->loadHTML($html);
 
         // Checking for minimum HTML to work with.
-        if (!($root = $this->dom->getElementsByTagName('body')->item(0)) || !$root->firstChild) {
+        if ( ! ($root = $this->dom->getElementsByTagName('body')->item(0)) || ! $root->firstChild)
+        {
             $this->logger->emergency('No body tag present or body tag empty');
 
             throw new ParseException('Invalid or incomplete HTML.');
@@ -146,7 +147,8 @@ class Readability
 
         $this->getMainImage();
 
-        while (true) {
+        while (true)
+        {
             $root = $root->firstChild;
 
             $elementsToScore = $this->getNodes($root);
@@ -168,34 +170,44 @@ class Readability
 
             $parseSuccessful = true;
 
-            if ($result && $length < $this->configuration->getWordThreshold()) {
-                $this->dom = $this->loadHTML($html);
-                $root = $this->dom->getElementsByTagName('body')->item(0);
+            if ($result && $length < $this->configuration->getWordThreshold())
+            {
+                $this->dom       = $this->loadHTML($html);
+                $root            = $this->dom->getElementsByTagName('body')->item(0);
                 $parseSuccessful = false;
 
-                if ($this->configuration->getStripUnlikelyCandidates()) {
+                if ($this->configuration->getStripUnlikelyCandidates())
+                {
                     $this->logger->debug('[Parsing] Threshold not met, trying again setting StripUnlikelyCandidates as false');
                     $this->configuration->setStripUnlikelyCandidates(false);
-                    $this->attempts[] = ['articleContent' => $result, 'textLength' => $length];
-                } elseif ($this->configuration->getWeightClasses()) {
+                    $this->attempts[] = array('articleContent' => $result, 'textLength' => $length);
+                }
+                elseif ($this->configuration->getWeightClasses())
+                {
                     $this->logger->debug('[Parsing] Threshold not met, trying again setting WeightClasses as false');
                     $this->configuration->setWeightClasses(false);
-                    $this->attempts[] = ['articleContent' => $result, 'textLength' => $length];
-                } elseif ($this->configuration->getCleanConditionally()) {
+                    $this->attempts[] = array('articleContent' => $result, 'textLength' => $length);
+                }
+                elseif ($this->configuration->getCleanConditionally())
+                {
                     $this->logger->debug('[Parsing] Threshold not met, trying again setting CleanConditionally as false');
                     $this->configuration->setCleanConditionally(false);
-                    $this->attempts[] = ['articleContent' => $result, 'textLength' => $length];
-                } else {
+                    $this->attempts[] = array('articleContent' => $result, 'textLength' => $length);
+                }
+                else
+                {
                     $this->logger->debug('[Parsing] Threshold not met, searching across attempts for some content.');
-                    $this->attempts[] = ['articleContent' => $result, 'textLength' => $length];
+                    $this->attempts[] = array('articleContent' => $result, 'textLength' => $length);
 
                     // No luck after removing flags, just return the longest text we found during the different loops
-                    usort($this->attempts, function ($a, $b) {
+                    usort($this->attempts, function ($a, $b)
+                    {
                         return $a['textLength'] < $b['textLength'];
                     });
 
                     // But first check if we actually have something
-                    if (!$this->attempts[0]['textLength']) {
+                    if ( ! $this->attempts[0]['textLength'])
+                    {
                         $this->logger->emergency('[Parsing] Could not parse text, giving up :(');
 
                         throw new ParseException('Could not parse text.');
@@ -203,25 +215,30 @@ class Readability
 
                     $this->logger->debug('[Parsing] Threshold not met, but found some content in previous attempts.');
 
-                    $result = $this->attempts[0]['articleContent'];
+                    $result          = $this->attempts[0]['articleContent'];
                     $parseSuccessful = true;
                     break;
                 }
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
 
-        if ($parseSuccessful) {
+        if ($parseSuccessful)
+        {
             $result = $this->postProcessContent($result);
 
             // If we haven't found an excerpt in the article's metadata, use the article's
             // first paragraph as the excerpt. This can be used for displaying a preview of
             // the article's content.
-            if (!$this->getExcerpt()) {
+            if ( ! $this->getExcerpt())
+            {
                 $this->logger->debug('[Parsing] No excerpt text found on metadata, extracting first p node and using it as excerpt.');
                 $paragraphs = $result->getElementsByTagName('p');
-                if ($paragraphs->length > 0) {
+                if ($paragraphs->length > 0)
+                {
                     $this->setExcerpt(trim($paragraphs->item(0)->textContent));
                 }
             }
@@ -255,24 +272,27 @@ class Readability
 
         $dom = new DOMDocument('1.0', 'utf-8');
 
-        if (!$this->configuration->getSubstituteEntities()) {
+        if ( ! $this->configuration->getSubstituteEntities())
+        {
             // Keep the original HTML entities
             $dom->substituteEntities = false;
         }
 
-        if ($this->configuration->getNormalizeEntities()) {
+        if ($this->configuration->getNormalizeEntities())
+        {
             $this->logger->debug('[Loading] Normalized entities via mb_convert_encoding.');
             // Replace UTF-8 characters with the HTML Entity equivalent. Useful to fix html with mixed content
             $html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
         }
 
-        if ($this->configuration->getSummonCthulhu()) {
+        if ($this->configuration->getSummonCthulhu())
+        {
             $this->logger->debug('[Loading] Removed script tags via regex H̶͈̩̟̬̱͠E̡̨̬͔̳̜͢͠ ̡̧̯͉̩͙̩̹̞̠͎͈̹̥̠͞ͅͅC̶͉̞̘̖̝̗͓̬̯͍͉̤̬͢͢͞Ò̟̘͉͖͎͉̱̭̣̕M̴̯͈̻̱̱̣̗͈̠̙̲̥͘͞E̷̛͙̼̲͍͕̹͍͇̗̻̬̮̭̱̥͢Ş̛̟͔̙̜̤͇̮͍̙̝̀͘');
             $html = preg_replace('/<script\b[^>]*>([\s\S]*?)<\/script>/', '', $html);
         }
 
         // Prepend the XML tag to avoid having issues with special characters. Should be harmless.
-        $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $dom->loadHTML('<?xml encoding="UTF-8">'.$html);
         $dom->encoding = 'UTF-8';
 
         $this->removeScripts($dom);
@@ -291,7 +311,7 @@ class Readability
     {
         $this->logger->debug('[Metadata] Retrieving metadata...');
 
-        $values = [];
+        $values = array();
         // Match "description", or Twitter's "twitter:description" (Cards)
         // in name attribute.
         $namePattern = '/^\s*((twitter)\s*:\s*)?(description|title|image)\s*$/i';
@@ -299,42 +319,54 @@ class Readability
         // Match Facebook's Open Graph title & description properties.
         $propertyPattern = '/^\s*og\s*:\s*(description|title|image)\s*$/i';
 
-        foreach ($this->dom->getElementsByTagName('meta') as $meta) {
+        foreach ($this->dom->getElementsByTagName('meta') as $meta)
+        {
             /* @var DOMNode $meta */
-            $elementName = $meta->getAttribute('name');
+            $elementName     = $meta->getAttribute('name');
             $elementProperty = $meta->getAttribute('property');
 
-            if (in_array('author', [$elementName, $elementProperty])) {
+            if (in_array('author', array($elementName, $elementProperty)))
+            {
                 $this->logger->info(sprintf('[Metadata] Found author: \'%s\'', $meta->getAttribute('content')));
                 $this->setAuthor($meta->getAttribute('content'));
                 continue;
             }
 
             $name = null;
-            if (preg_match($namePattern, $elementName)) {
+            if (preg_match($namePattern, $elementName))
+            {
                 $name = $elementName;
-            } elseif (preg_match($propertyPattern, $elementProperty)) {
+            }
+            elseif (preg_match($propertyPattern, $elementProperty))
+            {
                 $name = $elementProperty;
             }
 
-            if ($name) {
+            if ($name)
+            {
                 $content = $meta->getAttribute('content');
-                if ($content) {
+                if ($content)
+                {
                     // Convert to lowercase and remove any whitespace
                     // so we can match below.
-                    $name = preg_replace('/\s/', '', strtolower($name));
+                    $name          = preg_replace('/\s/', '', strtolower($name));
                     $values[$name] = trim($content);
                 }
             }
         }
-        if (array_key_exists('description', $values)) {
+        if (array_key_exists('description', $values))
+        {
             $this->logger->info(sprintf('[Metadata] Found excerpt in \'description\' tag: \'%s\'', $values['description']));
             $this->setExcerpt($values['description']);
-        } elseif (array_key_exists('og:description', $values)) {
+        }
+        elseif (array_key_exists('og:description', $values))
+        {
             // Use facebook open graph description.
             $this->logger->info(sprintf('[Metadata] Found excerpt in \'og:description\' tag: \'%s\'', $values['og:description']));
             $this->setExcerpt($values['og:description']);
-        } elseif (array_key_exists('twitter:description', $values)) {
+        }
+        elseif (array_key_exists('twitter:description', $values))
+        {
             // Use twitter cards description.
             $this->logger->info(sprintf('[Metadata] Found excerpt in \'twitter:description\' tag: \'%s\'', $values['twitter:description']));
             $this->setExcerpt($values['twitter:description']);
@@ -342,23 +374,31 @@ class Readability
 
         $this->setTitle($this->getArticleTitle());
 
-        if (!$this->getTitle()) {
-            if (array_key_exists('og:title', $values)) {
+        if ( ! $this->getTitle())
+        {
+            if (array_key_exists('og:title', $values))
+            {
                 // Use facebook open graph title.
                 $this->logger->info(sprintf('[Metadata] Found title in \'og:title\' tag: \'%s\'', $values['og:title']));
                 $this->setTitle($values['og:title']);
-            } elseif (array_key_exists('twitter:title', $values)) {
+            }
+            elseif (array_key_exists('twitter:title', $values))
+            {
                 // Use twitter cards title.
                 $this->logger->info(sprintf('[Metadata] Found title in \'twitter:title\' tag: \'%s\'', $values['twitter:title']));
                 $this->setTitle($values['twitter:title']);
             }
         }
 
-        if (array_key_exists('og:image', $values) || array_key_exists('twitter:image', $values)) {
-            if (array_key_exists('og:image', $values)) {
+        if (array_key_exists('og:image', $values) || array_key_exists('twitter:image', $values))
+        {
+            if (array_key_exists('og:image', $values))
+            {
                 $this->logger->info(sprintf('[Metadata] Found main image in \'og:image\' tag: \'%s\'', $values['og:image']));
                 $this->setImage($values['og:image']);
-            } else {
+            }
+            else
+            {
                 $this->logger->info(sprintf('[Metadata] Found main image in \'twitter:image\' tag: \'%s\'', $values['twitter:image']));
                 $this->setImage($values['twitter:image']);
             }
@@ -372,23 +412,29 @@ class Readability
      */
     public function getImages()
     {
-        $result = [];
-        if ($this->getImage()) {
+        $result = array();
+        if ($this->getImage())
+        {
             $result[] = $this->getImage();
         }
 
-        if (null == $this->getDOMDocument()) {
+        if (null == $this->getDOMDocument())
+        {
             return $result;
         }
 
-        foreach ($this->getDOMDocument()->getElementsByTagName('img') as $img) {
-            if ($src = $img->getAttribute('src')) {
+        foreach ($this->getDOMDocument()->getElementsByTagName('img') as $img)
+        {
+            if ($src = $img->getAttribute('src'))
+            {
                 $result[] = $src;
             }
         }
 
-        if ($this->configuration->getFixRelativeURLs()) {
-            foreach ($result as &$imgSrc) {
+        if ($this->configuration->getFixRelativeURLs())
+        {
+            foreach ($result as &$imgSrc)
+            {
                 $imgSrc = $this->toAbsoluteURI($imgSrc);
             }
         }
@@ -406,25 +452,30 @@ class Readability
     {
         $imgUrl = false;
 
-        if ($this->getImage() !== null) {
+        if ($this->getImage() !== null)
+        {
             $imgUrl = $this->getImage();
         }
 
-        if (!$imgUrl) {
-            foreach ($this->dom->getElementsByTagName('link') as $link) {
+        if ( ! $imgUrl)
+        {
+            foreach ($this->dom->getElementsByTagName('link') as $link)
+            {
                 /** @var \DOMElement $link */
                 /*
                  * Check for the rel attribute, then check if the rel attribute is either img_src or image_src, and
                  * finally check for the existence of the href attribute, which should hold the image url.
                  */
-                if ($link->hasAttribute('rel') && ($link->getAttribute('rel') === 'img_src' || $link->getAttribute('rel') === 'image_src') && $link->hasAttribute('href')) {
+                if ($link->hasAttribute('rel') && ($link->getAttribute('rel') === 'img_src' || $link->getAttribute('rel') === 'image_src') && $link->hasAttribute('href'))
+                {
                     $imgUrl = $link->getAttribute('href');
                     break;
                 }
             }
         }
 
-        if (!empty($imgUrl) && $this->configuration->getFixRelativeURLs()) {
+        if ( ! empty($imgUrl) && $this->configuration->getFixRelativeURLs())
+        {
             $this->setImage($this->toAbsoluteURI($imgUrl));
         }
     }
@@ -438,22 +489,27 @@ class Readability
     {
         $originalTitle = null;
 
-        if ($this->getTitle()) {
+        if ($this->getTitle())
+        {
             $originalTitle = $this->getTitle();
-        } else {
+        }
+        else
+        {
             $this->logger->debug('[Metadata] Could not find title in metadata, searching for the title tag...');
             $titleTag = $this->dom->getElementsByTagName('title');
-            if ($titleTag->length > 0) {
+            if ($titleTag->length > 0)
+            {
                 $this->logger->info(sprintf('[Metadata] Using title tag as article title: \'%s\'', $titleTag->item(0)->nodeValue));
                 $originalTitle = $titleTag->item(0)->nodeValue;
             }
         }
 
-        if ($originalTitle === null) {
+        if ($originalTitle === null)
+        {
             return null;
         }
 
-        $curTitle = $originalTitle;
+        $curTitle                       = $originalTitle;
         $titleHadHierarchicalSeparators = false;
 
         /*
@@ -462,51 +518,65 @@ class Readability
          * Sanity warning: if you eval this match in PHPStorm's "Evaluate expression" box, it will return false
          * I can assure you it works properly if you let the code run.
          */
-        if (preg_match('/ [\|\-\\\\\/>»] /i', $curTitle)) {
-            $titleHadHierarchicalSeparators = (bool)preg_match('/ [\\\\\/>»] /', $curTitle);
-            $curTitle = preg_replace('/(.*)[\|\-\\\\\/>»] .*/i', '$1', $originalTitle);
+        if (preg_match('/ [\|\-\\\\\/>»] /i', $curTitle))
+        {
+            $titleHadHierarchicalSeparators = (bool) preg_match('/ [\\\\\/>»] /', $curTitle);
+            $curTitle                       = preg_replace('/(.*)[\|\-\\\\\/>»] .*/i', '$1', $originalTitle);
 
             $this->logger->info(sprintf('[Metadata] Found hierarchical separators in title, new title is: \'%s\'', $curTitle));
 
             // If the resulting title is too short (3 words or fewer), remove
             // the first part instead:
-            if (count(preg_split('/\s+/', $curTitle)) < 3) {
+            if (count(preg_split('/\s+/', $curTitle)) < 3)
+            {
                 $curTitle = preg_replace('/[^\|\-\\\\\/>»]*[\|\-\\\\\/>»](.*)/i', '$1', $originalTitle);
                 $this->logger->info(sprintf('[Metadata] Title too short, using the first part of the title instead: \'%s\'', $curTitle));
             }
-        } elseif (strpos($curTitle, ': ') !== false) {
+        }
+        elseif (strpos($curTitle, ': ') !== false)
+        {
             // Check if we have an heading containing this exact string, so we
             // could assume it's the full title.
             $match = false;
-            for ($i = 1; $i <= 2; $i++) {
-                foreach ($this->dom->getElementsByTagName('h' . $i) as $hTag) {
+            for ($i = 1; $i <= 2; $i++)
+            {
+                foreach ($this->dom->getElementsByTagName('h'.$i) as $hTag)
+                {
                     // Trim texts to avoid having false negatives when the title is surrounded by spaces or tabs
-                    if (trim($hTag->nodeValue) === trim($curTitle)) {
+                    if (trim($hTag->nodeValue) === trim($curTitle))
+                    {
                         $match = true;
                     }
                 }
             }
 
             // If we don't, let's extract the title out of the original title string.
-            if (!$match) {
+            if ( ! $match)
+            {
                 $curTitle = substr($originalTitle, strrpos($originalTitle, ':') + 1);
 
                 $this->logger->info(sprintf('[Metadata] Title has a colon in the middle, new title is: \'%s\'', $curTitle));
 
                 // If the title is now too short, try the first colon instead:
-                if (count(preg_split('/\s+/', $curTitle)) < 3) {
+                if (count(preg_split('/\s+/', $curTitle)) < 3)
+                {
                     $curTitle = substr($originalTitle, strpos($originalTitle, ':') + 1);
                     $this->logger->info(sprintf('[Metadata] Title too short, using the first part of the title instead: \'%s\'', $curTitle));
-                } elseif (count(preg_split('/\s+/', substr($curTitle, 0, strpos($curTitle, ':')))) > 5) {
+                }
+                elseif (count(preg_split('/\s+/', substr($curTitle, 0, strpos($curTitle, ':')))) > 5)
+                {
                     // But if we have too many words before the colon there's something weird
                     // with the titles and the H tags so let's just use the original title instead
                     $curTitle = $originalTitle;
                 }
             }
-        } elseif (mb_strlen($curTitle) > 150 || mb_strlen($curTitle) < 15) {
+        }
+        elseif (mb_strlen($curTitle) > 150 || mb_strlen($curTitle) < 15)
+        {
             $hOnes = $this->dom->getElementsByTagName('h1');
 
-            if ($hOnes->length === 1) {
+            if ($hOnes->length === 1)
+            {
                 $curTitle = $hOnes->item(0)->nodeValue;
                 $this->logger->info(sprintf('[Metadata] Using title from an H1 node: \'%s\'', $curTitle));
             }
@@ -520,11 +590,12 @@ class Readability
          * title or we decreased the number of words by more than 1 word, use
          * the original title.
          */
-        $curTitleWordCount = count(preg_split('/\s+/', $curTitle));
+        $curTitleWordCount      = count(preg_split('/\s+/', $curTitle));
         $originalTitleWordCount = count(preg_split('/\s+/', preg_replace('/[\|\-\\\\\/>»]+/', '', $originalTitle))) - 1;
 
         if ($curTitleWordCount <= 4 &&
-            (!$titleHadHierarchicalSeparators || $curTitleWordCount !== $originalTitleWordCount)) {
+            ( ! $titleHadHierarchicalSeparators || $curTitleWordCount !== $originalTitleWordCount))
+        {
             $curTitle = $originalTitle;
 
             $this->logger->info(sprintf('Using title from an H1 node: \'%s\'', $curTitle));
@@ -545,32 +616,37 @@ class Readability
         list($pathBase, $scheme, $prePath) = $this->getPathInfo($this->configuration->getOriginalURL());
 
         // If this is already an absolute URI, return it.
-        if (preg_match('/^[a-zA-Z][a-zA-Z0-9\+\-\.]*:/', $uri)) {
+        if (preg_match('/^[a-zA-Z][a-zA-Z0-9\+\-\.]*:/', $uri))
+        {
             return $uri;
         }
 
         // Scheme-rooted relative URI.
-        if (substr($uri, 0, 2) === '//') {
-            return $scheme . '://' . substr($uri, 2);
+        if (substr($uri, 0, 2) === '//')
+        {
+            return $scheme.'://'.substr($uri, 2);
         }
 
         // Prepath-rooted relative URI.
-        if (substr($uri, 0, 1) === '/') {
-            return $prePath . $uri;
+        if (substr($uri, 0, 1) === '/')
+        {
+            return $prePath.$uri;
         }
 
         // Dotslash relative URI.
-        if (strpos($uri, './') === 0) {
-            return $pathBase . substr($uri, 2);
+        if (strpos($uri, './') === 0)
+        {
+            return $pathBase.substr($uri, 2);
         }
         // Ignore hash URIs:
-        if (substr($uri, 0, 1) === '#') {
+        if (substr($uri, 0, 1) === '#')
+        {
             return $uri;
         }
 
         // Standard relative URI; add entire path. pathBase already includes a
         // trailing "/".
-        return $pathBase . $uri;
+        return $pathBase.$uri;
     }
 
     /**
@@ -583,22 +659,28 @@ class Readability
     public function getPathInfo($url)
     {
         // Check for base URLs
-        if ($this->dom->baseURI !== null) {
-            if (substr($this->dom->baseURI, 0, 1) === '/') {
+        if ($this->dom->baseURI !== null)
+        {
+            if (substr($this->dom->baseURI, 0, 1) === '/')
+            {
                 // URLs starting with '/' override completely the URL defined in the link
-                $pathBase = parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST) . $this->dom->baseURI;
-            } else {
-                // Otherwise just prepend the base to the actual path
-                $pathBase = parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST) . dirname(parse_url($url, PHP_URL_PATH)) . '/' . rtrim($this->dom->baseURI, '/') . '/';
+                $pathBase = parse_url($url, PHP_URL_SCHEME).'://'.parse_url($url, PHP_URL_HOST).$this->dom->baseURI;
             }
-        } else {
-            $pathBase = parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST) . dirname(parse_url($url, PHP_URL_PATH)) . '/';
+            else
+            {
+                // Otherwise just prepend the base to the actual path
+                $pathBase = parse_url($url, PHP_URL_SCHEME).'://'.parse_url($url, PHP_URL_HOST).dirname(parse_url($url, PHP_URL_PATH)).'/'.rtrim($this->dom->baseURI, '/').'/';
+            }
+        }
+        else
+        {
+            $pathBase = parse_url($url, PHP_URL_SCHEME).'://'.parse_url($url, PHP_URL_HOST).dirname(parse_url($url, PHP_URL_PATH)).'/';
         }
 
-        $scheme = parse_url($pathBase, PHP_URL_SCHEME);
-        $prePath = $scheme . '://' . parse_url($pathBase, PHP_URL_HOST);
+        $scheme  = parse_url($pathBase, PHP_URL_SCHEME);
+        $prePath = $scheme.'://'.parse_url($pathBase, PHP_URL_HOST);
 
-        return [$pathBase, $scheme, $prePath];
+        return array($pathBase, $scheme, $prePath);
     }
 
     /**
@@ -614,7 +696,7 @@ class Readability
 
         $stripUnlikelyCandidates = $this->configuration->getStripUnlikelyCandidates();
 
-        $elementsToScore = [];
+        $elementsToScore = array();
 
         /*
          * First, node prepping. Trash nodes that look cruddy (like ones with the
@@ -622,31 +704,36 @@ class Readability
          * used inappropriately (as in, where they contain no other block level elements.)
          */
 
-        while ($node) {
-            $matchString = $node->getAttribute('class') . ' ' . $node->getAttribute('id');
+        while ($node)
+        {
+            $matchString = $node->getAttribute('class').' '.$node->getAttribute('id');
 
             // Remove DOMComments nodes as we don't need them and mess up children counting
-            if ($node->nodeType === XML_COMMENT_NODE) {
+            if ($node->nodeType === XML_COMMENT_NODE)
+            {
                 $this->logger->debug(sprintf('[Get Nodes] Found comment node, removing... Node content was: \'%s\'', substr($node->nodeValue, 0, 128)));
                 $node = NodeUtility::removeAndGetNext($node);
                 continue;
             }
 
             // Check to see if this node is a byline, and remove it if it is.
-            if ($this->checkByline($node, $matchString)) {
+            if ($this->checkByline($node, $matchString))
+            {
                 $this->logger->debug(sprintf('[Get Nodes] Found byline, removing... Node content was: \'%s\'', substr($node->nodeValue, 0, 128)));
                 $node = NodeUtility::removeAndGetNext($node);
                 continue;
             }
 
             // Remove unlikely candidates
-            if ($stripUnlikelyCandidates) {
+            if ($stripUnlikelyCandidates)
+            {
                 if (
                     preg_match(NodeUtility::$regexps['unlikelyCandidates'], $matchString) &&
-                    !preg_match(NodeUtility::$regexps['okMaybeItsACandidate'], $matchString) &&
+                    ! preg_match(NodeUtility::$regexps['okMaybeItsACandidate'], $matchString) &&
                     $node->nodeName !== 'body' &&
                     $node->nodeName !== 'a'
-                ) {
+                )
+                {
                     $this->logger->debug(sprintf('[Get Nodes] Removing unlikely candidate. Node content was: \'%s\'', substr($node->nodeValue, 0, 128)));
                     $node = NodeUtility::removeAndGetNext($node);
                     continue;
@@ -655,43 +742,53 @@ class Readability
 
             // Remove DIV, SECTION, and HEADER nodes without any content(e.g. text, image, video, or iframe).
             if (($node->nodeName === 'div' || $node->nodeName === 'section' || $node->nodeName === 'header' ||
-                    $node->nodeName === 'h1' || $node->nodeName === 'h2' || $node->nodeName === 'h3' ||
-                    $node->nodeName === 'h4' || $node->nodeName === 'h5' || $node->nodeName === 'h6' ||
-                    $node->nodeName === 'p') &&
-                $node->isElementWithoutContent()) {
+                $node->nodeName === 'h1' || $node->nodeName === 'h2' || $node->nodeName === 'h3' ||
+                $node->nodeName === 'h4' || $node->nodeName === 'h5' || $node->nodeName === 'h6' ||
+                $node->nodeName === 'p') &&
+                $node->isElementWithoutContent())
+            {
                 $this->logger->debug(sprintf('[Get Nodes] Removing empty \'%s\' node.', $node->nodeName));
                 $node = NodeUtility::removeAndGetNext($node);
                 continue;
             }
 
-            if (in_array(strtolower($node->nodeName), $this->defaultTagsToScore)) {
+            if (in_array(strtolower($node->nodeName), $this->defaultTagsToScore))
+            {
                 $this->logger->debug(sprintf('[Get Nodes] Adding node to score list, node content is: \'%s\'', substr($node->nodeValue, 0, 128)));
                 $elementsToScore[] = $node;
             }
 
             // Turn all divs that don't have children block level elements into p's
-            if ($node->nodeName === 'div') {
+            if ($node->nodeName === 'div')
+            {
                 /*
                  * Sites like http://mobile.slate.com encloses each paragraph with a DIV
                  * element. DIVs with only a P element inside and no text content can be
                  * safely converted into plain P elements to avoid confusing the scoring
                  * algorithm with DIVs with are, in practice, paragraphs.
                  */
-                if ($node->hasSinglePNode()) {
+                if ($node->hasSinglePNode())
+                {
                     $this->logger->debug(sprintf('[Get Nodes] Found DIV with a single P node, removing DIV. Node content is: \'%s\'', substr($node->nodeValue, 0, 128)));
                     $pNode = $node->getChildren(true)[0];
                     $node->parentNode->replaceChild($pNode, $node);
-                    $node = $pNode;
+                    $node              = $pNode;
                     $elementsToScore[] = $node;
-                } elseif (!$node->hasSingleChildBlockElement()) {
+                }
+                elseif ( ! $node->hasSingleChildBlockElement())
+                {
                     $this->logger->debug(sprintf('[Get Nodes] Found DIV with a single child block element, converting to a P node. Node content is: \'%s\'', substr($node->nodeValue, 0, 128)));
-                    $node = NodeUtility::setNodeTag($node, 'p');
+                    $node              = NodeUtility::setNodeTag($node, 'p');
                     $elementsToScore[] = $node;
-                } else {
+                }
+                else
+                {
                     // EXPERIMENTAL
-                    foreach ($node->getChildren() as $child) {
+                    foreach ($node->getChildren() as $child)
+                    {
                         /** @var $child DOMNode */
-                        if ($child->nodeType === XML_TEXT_NODE && mb_strlen(trim($child->getTextContent())) > 0) {
+                        if ($child->nodeType === XML_TEXT_NODE && mb_strlen(trim($child->getTextContent())) > 0)
+                        {
                             $this->logger->debug(sprintf('[Get Nodes] Found DIV a text node inside, converting to a P node. Node content is: \'%s\'', substr($node->nodeValue, 0, 128)));
                             $newNode = $node->createNode($child, 'p');
                             $child->parentNode->replaceChild($newNode, $child);
@@ -716,20 +813,23 @@ class Readability
      */
     private function checkByline($node, $matchString)
     {
-        if (!$this->configuration->getArticleByLine()) {
+        if ( ! $this->configuration->getArticleByLine())
+        {
             return false;
         }
 
         /*
          * Check if the byline is already set
          */
-        if ($this->getAuthor()) {
+        if ($this->getAuthor())
+        {
             return false;
         }
 
         $rel = $node->getAttribute('rel');
 
-        if ($rel === 'author' || preg_match(NodeUtility::$regexps['byline'], $matchString) && $this->isValidByline($node->getTextContent())) {
+        if ($rel === 'author' || preg_match(NodeUtility::$regexps['byline'], $matchString) && $this->isValidByline($node->getTextContent()))
+        {
             $this->logger->info(sprintf('[Metadata] Found article author: \'%s\'', $node->getTextContent()));
             $this->setAuthor(trim($node->getTextContent()));
 
@@ -748,7 +848,8 @@ class Readability
      */
     private function isValidByline($text)
     {
-        if (gettype($text) == 'string') {
+        if (gettype($text) == 'string')
+        {
             $byline = trim($text);
 
             return (mb_strlen($byline) > 0) && (mb_strlen($text) < 100);
@@ -764,13 +865,18 @@ class Readability
      */
     private function removeScripts(DOMDocument $dom)
     {
-        $toRemove = ['script', 'noscript'];
+        $toRemove = array('script', 'noscript');
 
-        foreach ($toRemove as $tag) {
-            while ($script = $dom->getElementsByTagName($tag)) {
-                if ($script->item(0)) {
+        foreach ($toRemove as $tag)
+        {
+            while ($script = $dom->getElementsByTagName($tag))
+            {
+                if ($script->item(0))
+                {
                     $script->item(0)->parentNode->removeChild($script->item(0));
-                } else {
+                }
+                else
+                {
                     break;
                 }
             }
@@ -794,7 +900,8 @@ class Readability
          * (If we go the other way around we need to search for previous nodes forcing the creation of new functions
          * that will be used only here)
          */
-        foreach (iterator_to_array($dom->getElementsByTagName('br')) as $br) {
+        foreach (iterator_to_array($dom->getElementsByTagName('br')) as $br)
+        {
             $next = $br->nextSibling;
 
             /*
@@ -808,10 +915,11 @@ class Readability
              * or non-whitespace. This leaves behind the first <br> in the chain
              * (which will be replaced with a <p> later).
              */
-            while (($next = NodeUtility::nextElement($next)) && ($next->nodeName === 'br')) {
+            while (($next = NodeUtility::nextElement($next)) && ($next->nodeName === 'br'))
+            {
                 $this->logger->debug('[PrepDocument] Removing chain of BR nodes...');
 
-                $replaced = true;
+                $replaced  = true;
                 $brSibling = $next->nextSibling;
                 $next->parentNode->removeChild($next);
                 $next = $brSibling;
@@ -823,16 +931,20 @@ class Readability
              * chain.
              */
 
-            if ($replaced) {
+            if ($replaced)
+            {
                 $p = $dom->createElement('p');
                 $br->parentNode->replaceChild($p, $br);
 
                 $next = $p->nextSibling;
-                while ($next) {
+                while ($next)
+                {
                     // If we've hit another <br><br>, we're done adding children to this <p>.
-                    if ($next->nodeName === 'br') {
+                    if ($next->nodeName === 'br')
+                    {
                         $nextElem = NodeUtility::nextElement($next);
-                        if ($nextElem && $nextElem->nodeName === 'br') {
+                        if ($nextElem && $nextElem->nodeName === 'br')
+                        {
                             break;
                         }
                     }
@@ -848,9 +960,10 @@ class Readability
         }
 
         // Replace font tags with span
-        $fonts = $dom->getElementsByTagName('font');
+        $fonts  = $dom->getElementsByTagName('font');
         $length = $fonts->length;
-        for ($i = 0; $i < $length; $i++) {
+        for ($i = 0; $i < $length; $i++)
+        {
             $this->logger->debug('[PrepDocument] Converting font tag into a span tag.');
             $font = $fonts->item($length - 1 - $i);
             NodeUtility::setNodeTag($font, 'span', true);
@@ -868,23 +981,27 @@ class Readability
     {
         $this->logger->info('[Rating] Rating nodes...');
 
-        $candidates = [];
+        $candidates = array();
 
         /** @var DOMElement $node */
-        foreach ($nodes as $node) {
-            if (is_null($node->parentNode)) {
+        foreach ($nodes as $node)
+        {
+            if (is_null($node->parentNode))
+            {
                 continue;
             }
 
             // Discard nodes with less than 25 characters, without blank space
-            if (mb_strlen($node->getTextContent(true)) < 25) {
+            if (mb_strlen($node->getTextContent(true)) < 25)
+            {
                 continue;
             }
 
             $ancestors = $node->getNodeAncestors();
 
             // Exclude nodes with no ancestor
-            if (count($ancestors) === 0) {
+            if (count($ancestors) === 0)
+            {
                 continue;
             }
 
@@ -900,9 +1017,11 @@ class Readability
             $this->logger->debug(sprintf('[Rating] Node score %s, content: \'%s\'', $contentScore, substr($node->nodeValue, 0, 128)));
 
             /** @var $ancestor DOMElement */
-            foreach ($ancestors as $level => $ancestor) {
+            foreach ($ancestors as $level => $ancestor)
+            {
                 $this->logger->debug('[Rating] Found ancestor, initializing and adding it as a candidate...');
-                if (!$ancestor->isInitialized()) {
+                if ( ! $ancestor->isInitialized())
+                {
                     $ancestor->initializeNode($this->configuration->getWeightClasses());
                     $candidates[] = $ancestor;
                 }
@@ -914,15 +1033,20 @@ class Readability
                  *  - great grandparent+: ancestor level * 3
                  */
 
-                if ($level === 0) {
+                if ($level === 0)
+                {
                     $scoreDivider = 1;
-                } elseif ($level === 1) {
+                }
+                elseif ($level === 1)
+                {
                     $scoreDivider = 2;
-                } else {
+                }
+                else
+                {
                     $scoreDivider = $level * 3;
                 }
 
-                $currentScore = $ancestor->contentScore;
+                $currentScore           = $ancestor->contentScore;
                 $ancestor->contentScore = $currentScore + ($contentScore / $scoreDivider);
 
                 $this->logger->debug(sprintf('[Rating] Ancestor score %s, value: \'%s\'', $ancestor->contentScore, substr($ancestor->nodeValue, 0, 128)));
@@ -934,8 +1058,9 @@ class Readability
          * candidate nodes we found and find the one with the highest score.
          */
 
-        $topCandidates = [];
-        foreach ($candidates as $candidate) {
+        $topCandidates = array();
+        foreach ($candidates as $candidate)
+        {
 
             /*
              * Scale the final candidates score based on link density. Good content
@@ -945,12 +1070,15 @@ class Readability
 
             $candidate->contentScore = $candidate->contentScore * (1 - $candidate->getLinkDensity());
 
-            for ($i = 0; $i < $this->configuration->getMaxTopCandidates(); $i++) {
+            for ($i = 0; $i < $this->configuration->getMaxTopCandidates(); $i++)
+            {
                 $aTopCandidate = isset($topCandidates[$i]) ? $topCandidates[$i] : null;
 
-                if (!$aTopCandidate || $candidate->contentScore > $aTopCandidate->contentScore) {
-                    array_splice($topCandidates, $i, 0, [$candidate]);
-                    if (count($topCandidates) > $this->configuration->getMaxTopCandidates()) {
+                if ( ! $aTopCandidate || $candidate->contentScore > $aTopCandidate->contentScore)
+                {
+                    array_splice($topCandidates, $i, 0, array($candidate));
+                    if (count($topCandidates) > $this->configuration->getMaxTopCandidates())
+                    {
                         array_pop($topCandidates);
                     }
                     break;
@@ -958,7 +1086,7 @@ class Readability
             }
         }
 
-        $topCandidate = isset($topCandidates[0]) ? $topCandidates[0] : null;
+        $topCandidate         = isset($topCandidates[0]) ? $topCandidates[0] : null;
         $parentOfTopCandidate = null;
 
         /*
@@ -966,43 +1094,53 @@ class Readability
          * We also have to copy the body node so it is something we can modify.
          */
 
-        if ($topCandidate === null || $topCandidate->nodeName === 'body') {
+        if ($topCandidate === null || $topCandidate->nodeName === 'body')
+        {
             $this->logger->info('[Rating] No top candidate found or top candidate is the body tag. Moving all child nodes to a new DIV node.');
 
             // Move all of the page's children into topCandidate
-            $topCandidate = new DOMDocument('1.0', 'utf-8');
+            $topCandidate           = new DOMDocument('1.0', 'utf-8');
             $topCandidate->encoding = 'UTF-8';
             $topCandidate->appendChild($topCandidate->createElement('div', ''));
             $kids = $this->dom->getElementsByTagName('body')->item(0)->childNodes;
 
             // Cannot be foreached, don't ask me why.
-            for ($i = 0; $i < $kids->length; $i++) {
+            for ($i = 0; $i < $kids->length; $i++)
+            {
                 $import = $topCandidate->importNode($kids->item($i), true);
                 $topCandidate->firstChild->appendChild($import);
             }
 
             // Candidate must be created using firstChild to grab the DOMElement instead of the DOMDocument.
             $topCandidate = $topCandidate->firstChild;
-        } elseif ($topCandidate) {
+        }
+        elseif ($topCandidate)
+        {
             $this->logger->info(sprintf('[Rating] Found top candidate, score: %s', $topCandidate->contentScore));
             // Find a better top candidate node if it contains (at least three) nodes which belong to `topCandidates` array
             // and whose scores are quite closed with current `topCandidate` node.
-            $alternativeCandidateAncestors = [];
-            for ($i = 1; $i < count($topCandidates); $i++) {
-                if ($topCandidates[$i]->contentScore / $topCandidate->contentScore >= 0.75) {
+            $alternativeCandidateAncestors = array();
+            for ($i = 1; $i < count($topCandidates); $i++)
+            {
+                if ($topCandidates[$i]->contentScore / $topCandidate->contentScore >= 0.75)
+                {
                     array_push($alternativeCandidateAncestors, $topCandidates[$i]->getNodeAncestors(false));
                 }
             }
 
             $MINIMUM_TOPCANDIDATES = 3;
-            if (count($alternativeCandidateAncestors) >= $MINIMUM_TOPCANDIDATES) {
+            if (count($alternativeCandidateAncestors) >= $MINIMUM_TOPCANDIDATES)
+            {
                 $parentOfTopCandidate = $topCandidate->parentNode;
-                while ($parentOfTopCandidate->nodeName !== 'body') {
+                while ($parentOfTopCandidate->nodeName !== 'body')
+                {
                     $listsContainingThisAncestor = 0;
-                    for ($ancestorIndex = 0; $ancestorIndex < count($alternativeCandidateAncestors) && $listsContainingThisAncestor < $MINIMUM_TOPCANDIDATES; $ancestorIndex++) {
-                        $listsContainingThisAncestor += (int)in_array($parentOfTopCandidate, $alternativeCandidateAncestors[$ancestorIndex]);
+                    for ($ancestorIndex = 0; $ancestorIndex < count($alternativeCandidateAncestors) && $listsContainingThisAncestor < $MINIMUM_TOPCANDIDATES; $ancestorIndex++)
+                    {
+                        $listsContainingThisAncestor += (int) in_array($parentOfTopCandidate, $alternativeCandidateAncestors[$ancestorIndex]);
                     }
-                    if ($listsContainingThisAncestor >= $MINIMUM_TOPCANDIDATES) {
+                    if ($listsContainingThisAncestor >= $MINIMUM_TOPCANDIDATES)
+                    {
                         $topCandidate = $parentOfTopCandidate;
                         break;
                     }
@@ -1021,34 +1159,38 @@ class Readability
              */
 
             $parentOfTopCandidate = $topCandidate->parentNode;
-            $lastScore = $topCandidate->contentScore;
+            $lastScore            = $topCandidate->contentScore;
 
             // The scores shouldn't get too low.
             $scoreThreshold = $lastScore / 3;
 
             /* @var DOMElement $parentOfTopCandidate */
             // Check if we are actually dealing with a DOMNode and not a DOMDocument node or higher
-            while ($parentOfTopCandidate->nodeName !== 'body' && $parentOfTopCandidate->nodeType === XML_ELEMENT_NODE) {
+            while ($parentOfTopCandidate->nodeName !== 'body' && $parentOfTopCandidate->nodeType === XML_ELEMENT_NODE)
+            {
                 $parentScore = $parentOfTopCandidate->contentScore;
-                if ($parentScore < $scoreThreshold) {
+                if ($parentScore < $scoreThreshold)
+                {
                     break;
                 }
 
-                if ($parentScore > $lastScore) {
+                if ($parentScore > $lastScore)
+                {
                     // Alright! We found a better parent to use.
                     $topCandidate = $parentOfTopCandidate;
                     $this->logger->info('[Rating] Found a better top candidate.');
                     break;
                 }
-                $lastScore = $parentOfTopCandidate->contentScore;
+                $lastScore            = $parentOfTopCandidate->contentScore;
                 $parentOfTopCandidate = $parentOfTopCandidate->parentNode;
             }
 
             // If the top candidate is the only child, use parent instead. This will help sibling
             // joining logic when adjacent content is actually located in parent's sibling node.
             $parentOfTopCandidate = $topCandidate->parentNode;
-            while ($parentOfTopCandidate->nodeName !== 'body' && count($parentOfTopCandidate->getChildren(true)) === 1) {
-                $topCandidate = $parentOfTopCandidate;
+            while ($parentOfTopCandidate->nodeName !== 'body' && count($parentOfTopCandidate->getChildren(true)) === 1)
+            {
+                $topCandidate         = $parentOfTopCandidate;
                 $parentOfTopCandidate = $topCandidate->parentNode;
             }
         }
@@ -1067,47 +1209,60 @@ class Readability
         $siblingScoreThreshold = max(10, $topCandidate->contentScore * 0.2);
         // Keep potential top candidate's parent node to try to get text direction of it later.
         $parentOfTopCandidate = $topCandidate->parentNode;
-        $siblings = $parentOfTopCandidate->getChildren();
+        $siblings             = $parentOfTopCandidate->getChildren();
 
         $hasContent = false;
 
         $this->logger->info('[Rating] Adding top candidate siblings...');
 
         /** @var DOMElement $sibling */
-        foreach ($siblings as $sibling) {
+        foreach ($siblings as $sibling)
+        {
             $append = false;
 
-            if ($sibling === $topCandidate) {
+            if ($sibling === $topCandidate)
+            {
                 $this->logger->debug('[Rating] Sibling is equal to the top candidate, adding to the final article...');
 
                 $append = true;
-            } else {
+            }
+            else
+            {
                 $contentBonus = 0;
 
                 // Give a bonus if sibling nodes and top candidates have the example same classname
-                if ($sibling->getAttribute('class') === $topCandidate->getAttribute('class') && $topCandidate->getAttribute('class') !== '') {
+                if ($sibling->getAttribute('class') === $topCandidate->getAttribute('class') && $topCandidate->getAttribute('class') !== '')
+                {
                     $contentBonus += $topCandidate->contentScore * 0.2;
                 }
-                if ($sibling->contentScore + $contentBonus >= $siblingScoreThreshold) {
+                if ($sibling->contentScore + $contentBonus >= $siblingScoreThreshold)
+                {
                     $append = true;
-                } elseif ($sibling->nodeName === 'p') {
+                }
+                elseif ($sibling->nodeName === 'p')
+                {
                     $linkDensity = $sibling->getLinkDensity();
                     $nodeContent = $sibling->getTextContent(true);
 
-                    if (mb_strlen($nodeContent) > 80 && $linkDensity < 0.25) {
+                    if (mb_strlen($nodeContent) > 80 && $linkDensity < 0.25)
+                    {
                         $append = true;
-                    } elseif ($nodeContent && mb_strlen($nodeContent) < 80 && $linkDensity === 0 && preg_match('/\.( |$)/', $nodeContent)) {
+                    }
+                    elseif ($nodeContent && mb_strlen($nodeContent) < 80 && $linkDensity === 0 && preg_match('/\.( |$)/', $nodeContent))
+                    {
                         $append = true;
                     }
                 }
             }
 
-            if ($append) {
+            if ($append)
+            {
                 $this->logger->debug(sprintf('[Rating] Appending sibling to final article, content is: \'%s\'', substr($sibling->nodeValue, 0, 128)));
 
                 $hasContent = true;
 
-                if (!in_array(strtolower($sibling->nodeName), $this->alterToDIVExceptions)) {
+                if ( ! in_array(strtolower($sibling->nodeName), $this->alterToDIVExceptions))
+                {
                     /*
                      * We have a node that isn't a common block level element, like a form or td tag.
                      * Turn it into a div so it doesn't get filtered out later by accident.
@@ -1120,22 +1275,25 @@ class Readability
                 $articleContent->appendChild($import);
 
                 /*
-                 * No node shifting needs to be check because when calling getChildren, an array is made with the
-                 * children of the parent node, instead of using the DOMElement childNodes function, which, when used
-                 * along with appendChild, would shift the nodes position and the current foreach will behave in
-                 * unpredictable ways.
-                 */
+             * No node shifting needs to be check because when calling getChildren, an array is made with the
+             * children of the parent node, instead of using the DOMElement childNodes function, which, when used
+             * along with appendChild, would shift the nodes position and the current foreach will behave in
+             * unpredictable ways.
+             */
             }
         }
 
         $articleContent = $this->prepArticle($articleContent);
 
-        if ($hasContent) {
+        if ($hasContent)
+        {
             // Find out text direction from ancestors of final top candidate.
-            $ancestors = array_merge([$parentOfTopCandidate, $topCandidate], $parentOfTopCandidate->getNodeAncestors());
-            foreach ($ancestors as $ancestor) {
+            $ancestors = array_merge(array($parentOfTopCandidate, $topCandidate), $parentOfTopCandidate->getNodeAncestors());
+            foreach ($ancestors as $ancestor)
+            {
                 $articleDir = $ancestor->getAttribute('dir');
-                if ($articleDir) {
+                if ($articleDir)
+                {
                     $this->setDirection($articleDir);
                     $this->logger->debug(sprintf('[Rating] Found article direction: %s', $articleDir));
                     break;
@@ -1143,7 +1301,9 @@ class Readability
             }
 
             return $articleContent;
-        } else {
+        }
+        else
+        {
             return false;
         }
     }
@@ -1178,7 +1338,8 @@ class Readability
 
         // Clean out elements have "share" in their id/class combinations from final top candidates,
         // which means we don't remove the top candidates even they have "share".
-        foreach ($article->childNodes as $child) {
+        foreach ($article->childNodes as $child)
+        {
             $this->_cleanMatchedNodes($child, '/share/i');
         }
 
@@ -1188,16 +1349,22 @@ class Readability
          * so remove it since we already extract the title separately.
          */
         $h2 = $article->getElementsByTagName('h2');
-        if ($h2->length === 1) {
+        if ($h2->length === 1)
+        {
             $lengthSimilarRate = (mb_strlen($h2->item(0)->textContent) - mb_strlen($this->getTitle())) / max(mb_strlen($this->getTitle()), 1);
 
-            if (abs($lengthSimilarRate) < 0.5) {
-                if ($lengthSimilarRate > 0) {
+            if (abs($lengthSimilarRate) < 0.5)
+            {
+                if ($lengthSimilarRate > 0)
+                {
                     $titlesMatch = strpos($h2->item(0)->textContent, $this->getTitle()) !== false;
-                } else {
+                }
+                else
+                {
                     $titlesMatch = strpos($this->getTitle(), $h2->item(0)->textContent) !== false;
                 }
-                if ($titlesMatch) {
+                if ($titlesMatch)
+                {
                     $this->logger->info('[PrepArticle] Found title repeated in an H2 node, removing...');
                     $this->_clean($article, 'h2');
                 }
@@ -1219,9 +1386,11 @@ class Readability
 
         $this->_cleanExtraParagraphs($article);
 
-        foreach (iterator_to_array($article->getElementsByTagName('br')) as $br) {
+        foreach (iterator_to_array($article->getElementsByTagName('br')) as $br)
+        {
             $next = $br->nextSibling;
-            if ($next && $next->nodeName === 'p') {
+            if ($next && $next->nodeName === 'p')
+            {
                 $this->logger->debug('[PrepArticle] Removing br node next to a p node.');
                 $br->parentNode->removeChild($br);
             }
@@ -1242,46 +1411,55 @@ class Readability
     public function _markDataTables(DOMDocument $article)
     {
         $tables = $article->getElementsByTagName('table');
-        foreach ($tables as $table) {
+        foreach ($tables as $table)
+        {
             /** @var DOMElement $table */
             $role = $table->getAttribute('role');
-            if ($role === 'presentation') {
+            if ($role === 'presentation')
+            {
                 $table->setReadabilityDataTable(false);
                 continue;
             }
             $datatable = $table->getAttribute('datatable');
-            if ($datatable == '0') {
+            if ($datatable == '0')
+            {
                 $table->setReadabilityDataTable(false);
                 continue;
             }
             $summary = $table->getAttribute('summary');
-            if ($summary) {
+            if ($summary)
+            {
                 $table->setReadabilityDataTable(true);
                 continue;
             }
 
             $caption = $table->getElementsByTagName('caption');
-            if ($caption->length > 0 && $caption->item(0)->childNodes->length > 0) {
+            if ($caption->length > 0 && $caption->item(0)->childNodes->length > 0)
+            {
                 $table->setReadabilityDataTable(true);
                 continue;
             }
 
             // If the table has a descendant with any of these tags, consider a data table:
-            foreach (['col', 'colgroup', 'tfoot', 'thead', 'th'] as $dataTableDescendants) {
-                if ($table->getElementsByTagName($dataTableDescendants)->length > 0) {
+            foreach (array('col', 'colgroup', 'tfoot', 'thead', 'th') as $dataTableDescendants)
+            {
+                if ($table->getElementsByTagName($dataTableDescendants)->length > 0)
+                {
                     $table->setReadabilityDataTable(true);
                     continue 2;
                 }
             }
 
             // Nested tables indicate a layout table:
-            if ($table->getElementsByTagName('table')->length > 0) {
+            if ($table->getElementsByTagName('table')->length > 0)
+            {
                 $table->setReadabilityDataTable(false);
                 continue;
             }
 
             $sizeInfo = $table->getRowAndColumnCount();
-            if ($sizeInfo['rows'] >= 10 || $sizeInfo['columns'] > 4) {
+            if ($sizeInfo['rows'] >= 10 || $sizeInfo['columns'] > 4)
+            {
                 $table->setReadabilityDataTable(true);
                 continue;
             }
@@ -1297,27 +1475,32 @@ class Readability
      **/
     public function _cleanStyles($node)
     {
-        if (property_exists($node, 'tagName') && $node->tagName === 'svg') {
+        if (property_exists($node, 'tagName') && $node->tagName === 'svg')
+        {
             return;
         }
 
         // Do not bother if there's no method to remove an attribute
-        if (method_exists($node, 'removeAttribute')) {
-            $presentational_attributes = ['align', 'background', 'bgcolor', 'border', 'cellpadding', 'cellspacing', 'frame', 'hspace', 'rules', 'style', 'valign', 'vspace'];
+        if (method_exists($node, 'removeAttribute'))
+        {
+            $presentational_attributes = array('align', 'background', 'bgcolor', 'border', 'cellpadding', 'cellspacing', 'frame', 'hspace', 'rules', 'style', 'valign', 'vspace');
             // Remove `style` and deprecated presentational attributes
-            foreach ($presentational_attributes as $presentational_attribute) {
+            foreach ($presentational_attributes as $presentational_attribute)
+            {
                 $node->removeAttribute($presentational_attribute);
             }
 
-            $deprecated_size_attribute_elems = ['table', 'th', 'td', 'hr', 'pre'];
-            if (property_exists($node, 'tagName') && in_array($node->tagName, $deprecated_size_attribute_elems)) {
+            $deprecated_size_attribute_elems = array('table', 'th', 'td', 'hr', 'pre');
+            if (property_exists($node, 'tagName') && in_array($node->tagName, $deprecated_size_attribute_elems))
+            {
                 $node->removeAttribute('width');
                 $node->removeAttribute('height');
             }
         }
 
         $cur = $node->firstChild;
-        while ($cur !== null) {
+        while ($cur !== null)
+        {
             $this->_cleanStyles($cur);
             $cur = $cur->nextSibling;
         }
@@ -1334,12 +1517,16 @@ class Readability
     public function _cleanMatchedNodes($node, $regex)
     {
         $endOfSearchMarkerNode = NodeUtility::getNextNode($node, true);
-        $next = NodeUtility::getNextNode($node);
-        while ($next && $next !== $endOfSearchMarkerNode) {
-            if (preg_match($regex, sprintf('%s %s', $next->getAttribute('class'), $next->getAttribute('id')))) {
+        $next                  = NodeUtility::getNextNode($node);
+        while ($next && $next !== $endOfSearchMarkerNode)
+        {
+            if (preg_match($regex, sprintf('%s %s', $next->getAttribute('class'), $next->getAttribute('id'))))
+            {
                 $this->logger->debug(sprintf('Removing matched node with regex: \'%s\', node class was: \'%s\', id: \'%s\'', $regex, $next->getAttribute('class'), $next->getAttribute('id')));
                 $next = NodeUtility::removeAndGetNext($next);
-            } else {
+            }
+            else
+            {
                 $next = NodeUtility::getNextNode($next);
             }
         }
@@ -1353,19 +1540,21 @@ class Readability
     public function _cleanExtraParagraphs(DOMDocument $article)
     {
         $paragraphs = $article->getElementsByTagName('p');
-        $length = $paragraphs->length;
+        $length     = $paragraphs->length;
 
-        for ($i = 0; $i < $length; $i++) {
+        for ($i = 0; $i < $length; $i++)
+        {
             $paragraph = $paragraphs->item($length - 1 - $i);
 
-            $imgCount = $paragraph->getElementsByTagName('img')->length;
-            $embedCount = $paragraph->getElementsByTagName('embed')->length;
+            $imgCount    = $paragraph->getElementsByTagName('img')->length;
+            $embedCount  = $paragraph->getElementsByTagName('embed')->length;
             $objectCount = $paragraph->getElementsByTagName('object')->length;
             // At this point, nasty iframes have been removed, only remain embedded video ones.
             $iframeCount = $paragraph->getElementsByTagName('iframe')->length;
-            $totalCount = $imgCount + $embedCount + $objectCount + $iframeCount;
+            $totalCount  = $imgCount + $embedCount + $objectCount + $iframeCount;
 
-            if ($totalCount === 0 && !preg_replace(NodeUtility::$regexps['onlyWhitespace'], '', $paragraph->textContent)) {
+            if ($totalCount === 0 && ! preg_replace(NodeUtility::$regexps['onlyWhitespace'], '', $paragraph->textContent))
+            {
                 $this->logger->debug(sprintf('[PrepArticle] Removing extra paragraph. Text content was: \'%s\'', substr($paragraph->textContent, 0, 128)));
                 $paragraph->parentNode->removeChild($paragraph);
             }
@@ -1379,11 +1568,12 @@ class Readability
      */
     public function _cleanConditionally(DOMDocument $article, $tag)
     {
-        if (!$this->configuration->getCleanConditionally()) {
+        if ( ! $this->configuration->getCleanConditionally())
+        {
             return;
         }
 
-        $isList = in_array($tag, ['ul', 'ol']);
+        $isList = in_array($tag, array('ul', 'ol'));
 
         /*
          * Gather counts for other typical elements embedded within.
@@ -1392,62 +1582,70 @@ class Readability
          */
 
         $DOMNodeList = $article->getElementsByTagName($tag);
-        $length = $DOMNodeList->length;
-        for ($i = 0; $i < $length; $i++) {
+        $length      = $DOMNodeList->length;
+        for ($i = 0; $i < $length; $i++)
+        {
             /** @var $node DOMElement */
             $node = $DOMNodeList->item($length - 1 - $i);
 
             // First check if we're in a data table, in which case don't remove us.
-            if ($node->hasAncestorTag($node, 'table', -1) && $node->isReadabilityDataTable()) {
+            if ($node->hasAncestorTag($node, 'table', -1) && $node->isReadabilityDataTable())
+            {
                 continue;
             }
 
             $weight = 0;
-            if ($this->configuration->getWeightClasses()) {
+            if ($this->configuration->getWeightClasses())
+            {
                 $weight = $node->getClassWeight();
             }
 
-            if ($weight < 0) {
+            if ($weight < 0)
+            {
                 $this->logger->debug(sprintf('[PrepArticle] Removing tag \'%s\' with 0 or less weight', $tag));
 
                 NodeUtility::removeNode($node);
                 continue;
             }
 
-            if (substr_count($node->getTextContent(), ',') < 10) {
+            if (substr_count($node->getTextContent(), ',') < 10)
+            {
                 /*
                  * If there are not very many commas, and the number of
                  * non-paragraph elements is more than paragraphs or other
                  * ominous signs, remove the element.
                  */
 
-                $p = $node->getElementsByTagName('p')->length;
-                $img = $node->getElementsByTagName('img')->length;
-                $li = $node->getElementsByTagName('li')->length - 100;
+                $p     = $node->getElementsByTagName('p')->length;
+                $img   = $node->getElementsByTagName('img')->length;
+                $li    = $node->getElementsByTagName('li')->length - 100;
                 $input = $node->getElementsByTagName('input')->length;
 
                 $embedCount = 0;
-                $embeds = $node->getElementsByTagName('embed');
+                $embeds     = $node->getElementsByTagName('embed');
 
-                foreach ($embeds as $embedNode) {
-                    if (preg_match(NodeUtility::$regexps['videos'], $embedNode->C14N())) {
+                foreach ($embeds as $embedNode)
+                {
+                    if (preg_match(NodeUtility::$regexps['videos'], $embedNode->C14N()))
+                    {
                         $embedCount++;
                     }
                 }
 
-                $linkDensity = $node->getLinkDensity();
+                $linkDensity   = $node->getLinkDensity();
                 $contentLength = mb_strlen($node->getTextContent(true));
 
                 $haveToRemove =
-                    ($img > 1 && $p / $img < 0.5 && !$node->hasAncestorTag($node, 'figure')) ||
-                    (!$isList && $li > $p) ||
+                    ($img > 1 && $p / $img < 0.5 && ! $node->hasAncestorTag($node, 'figure')) ||
+                    ( ! $isList && $li > $p) ||
                     ($input > floor($p / 3)) ||
-                    (!$isList && $contentLength < 25 && ($img === 0 || $img > 2) && !$node->hasAncestorTag($node, 'figure')) ||
-                    (!$isList && $weight < 25 && $linkDensity > 0.2) ||
+                    ( ! $isList && $contentLength < 25 && ($img === 0 || $img > 2) && ! $node->hasAncestorTag($node, 'figure')) ||
+                    ( ! $isList && $weight < 25 && $linkDensity > 0.2) ||
                     ($weight >= 25 && $linkDensity > 0.5) ||
                     (($embedCount === 1 && $contentLength < 75) || $embedCount > 1);
 
-                if ($haveToRemove) {
+                if ($haveToRemove)
+                {
                     $this->logger->debug(sprintf('[PrepArticle] Removing tag \'%s\'.', $tag));
 
                     NodeUtility::removeNode($node);
@@ -1467,28 +1665,33 @@ class Readability
      **/
     public function _clean(DOMDocument $article, $tag)
     {
-        $isEmbed = in_array($tag, ['object', 'embed', 'iframe']);
+        $isEmbed = in_array($tag, array('object', 'embed', 'iframe'));
 
         $DOMNodeList = $article->getElementsByTagName($tag);
-        $length = $DOMNodeList->length;
-        for ($i = 0; $i < $length; $i++) {
+        $length      = $DOMNodeList->length;
+        for ($i = 0; $i < $length; $i++)
+        {
             $item = $DOMNodeList->item($length - 1 - $i);
 
             // Allow youtube and vimeo videos through as people usually want to see those.
-            if ($isEmbed) {
-                $attributeValues = [];
-                foreach ($item->attributes as $name => $value) {
+            if ($isEmbed)
+            {
+                $attributeValues = array();
+                foreach ($item->attributes as $name => $value)
+                {
                     $attributeValues[] = $value->nodeValue;
                 }
                 $attributeValues = implode('|', $attributeValues);
 
                 // First, check the elements attributes to see if any of them contain youtube or vimeo
-                if (preg_match(NodeUtility::$regexps['videos'], $attributeValues)) {
+                if (preg_match(NodeUtility::$regexps['videos'], $attributeValues))
+                {
                     continue;
                 }
 
                 // Then check the elements inside this element for the same.
-                if (preg_match(NodeUtility::$regexps['videos'], $item->C14N())) {
+                if (preg_match(NodeUtility::$regexps['videos'], $item->C14N()))
+                {
                     continue;
                 }
             }
@@ -1507,16 +1710,20 @@ class Readability
      **/
     public function _cleanHeaders(DOMDocument $article)
     {
-        for ($headerIndex = 1; $headerIndex < 3; $headerIndex++) {
-            $headers = $article->getElementsByTagName('h' . $headerIndex);
+        for ($headerIndex = 1; $headerIndex < 3; $headerIndex++)
+        {
+            $headers = $article->getElementsByTagName('h'.$headerIndex);
             /** @var $header DOMElement */
-            foreach ($headers as $header) {
+            foreach ($headers as $header)
+            {
                 $weight = 0;
-                if ($this->configuration->getWeightClasses()) {
+                if ($this->configuration->getWeightClasses())
+                {
                     $weight = $header->getClassWeight();
                 }
 
-                if ($weight < 0) {
+                if ($weight < 0)
+                {
                     $this->logger->debug(sprintf('[PrepArticle] Removing H node with 0 or less weight. Content was: \'%s\'', substr($header->nodeValue, 0, 128)));
 
                     NodeUtility::removeNode($header);
@@ -1538,11 +1745,13 @@ class Readability
      **/
     public function _cleanClasses($node)
     {
-        if ($node->getAttribute('class') !== '') {
+        if ($node->getAttribute('class') !== '')
+        {
             $node->removeAttribute('class');
         }
 
-        for ($node = $node->firstChild; $node !== null; $node = $node->nextSibling) {
+        for ($node = $node->firstChild; $node !== null; $node = $node->nextSibling)
+        {
             $this->_cleanClasses($node);
         }
     }
@@ -1557,19 +1766,25 @@ class Readability
         $this->logger->info('[PostProcess] PostProcessing content...');
 
         // Readability cannot open relative uris so we convert them to absolute uris.
-        if ($this->configuration->getFixRelativeURLs()) {
-            foreach (iterator_to_array($article->getElementsByTagName('a')) as $link) {
+        if ($this->configuration->getFixRelativeURLs())
+        {
+            foreach (iterator_to_array($article->getElementsByTagName('a')) as $link)
+            {
                 /** @var DOMElement $link */
                 $href = $link->getAttribute('href');
-                if ($href) {
+                if ($href)
+                {
                     // Replace links with javascript: URIs with text content, since
                     // they won't work after scripts have been removed from the page.
-                    if (strpos($href, 'javascript:') === 0) {
+                    if (strpos($href, 'javascript:') === 0)
+                    {
                         $this->logger->debug(sprintf('[PostProcess] Removing \'javascript:\' link. Content is: \'%s\'', substr($link->textContent, 0, 128)));
 
                         $text = $article->createTextNode($link->textContent);
                         $link->parentNode->replaceChild($text, $link);
-                    } else {
+                    }
+                    else
+                    {
                         $this->logger->debug(sprintf('[PostProcess] Converting link to absolute URI: \'%s\'', substr($href, 0, 128)));
 
                         $link->setAttribute('href', $this->toAbsoluteURI($href));
@@ -1577,22 +1792,24 @@ class Readability
                 }
             }
 
-            foreach ($article->getElementsByTagName('img') as $img) {
+            foreach ($article->getElementsByTagName('img') as $img)
+            {
                 /** @var DOMElement $img */
                 /*
                  * Extract all possible sources of img url and select the first one on the list.
                  */
-                $url = [
+                $url = array(
                     $img->getAttribute('src'),
                     $img->getAttribute('data-src'),
                     $img->getAttribute('data-original'),
                     $img->getAttribute('data-orig'),
-                    $img->getAttribute('data-url')
-                ];
+                    $img->getAttribute('data-url'),
+                );
 
                 $src = array_filter($url);
                 $src = reset($src);
-                if ($src) {
+                if ($src)
+                {
                     $this->logger->debug(sprintf('[PostProcess] Converting image URL to absolute URI: \'%s\'', substr($src, 0, 128)));
 
                     $img->setAttribute('src', $this->toAbsoluteURI($src));
