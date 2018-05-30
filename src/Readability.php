@@ -139,8 +139,8 @@ class Readability
         if ( ! ($root = $this->dom->getElementsByTagName('body')->item(0)) || ! $root->firstChild)
         {
             $this->logger->emergency('No body tag present or body tag empty');
-
-            throw new ParseException('Invalid or incomplete HTML.');
+            return false;
+            //throw new ParseException('Invalid or incomplete HTML.');
         }
 
         $this->getMetadata();
@@ -209,8 +209,8 @@ class Readability
                     if ( ! $this->attempts[0]['textLength'])
                     {
                         $this->logger->emergency('[Parsing] Could not parse text, giving up :(');
-
-                        throw new ParseException('Could not parse text.');
+                        return false;
+                        //throw new ParseException('Could not parse text.');
                     }
 
                     $this->logger->debug('[Parsing] Threshold not met, but found some content in previous attempts.');
@@ -614,7 +614,10 @@ class Readability
     private function toAbsoluteURI($uri)
     {
         list($pathBase, $scheme, $prePath) = $this->getPathInfo($this->configuration->getOriginalURL());
-
+        if (empty($scheme))
+        {
+            $scheme = 'http';
+        }
         // If this is already an absolute URI, return it.
         if (preg_match('/^[a-zA-Z][a-zA-Z0-9\+\-\.]*:/', $uri))
         {
@@ -832,7 +835,6 @@ class Readability
         {
             $this->logger->info(sprintf('[Metadata] Found article author: \'%s\'', $node->getTextContent()));
             $this->setAuthor(trim($node->getTextContent()));
-
             return true;
         }
 
@@ -1799,11 +1801,18 @@ class Readability
                  * Extract all possible sources of img url and select the first one on the list.
                  */
                 $url = array(
-                    $img->getAttribute('src'),
                     $img->getAttribute('data-src'),
                     $img->getAttribute('data-original'),
                     $img->getAttribute('data-orig'),
                     $img->getAttribute('data-url'),
+                    $img->getAttribute('lazy-src'),
+                    $img->getAttribute('data-echo'),
+                    $img->getAttribute('real_src'),
+                    $img->getAttribute('original'),
+                    $img->getAttribute('zoomfile'),
+                    $img->getAttribute('img_img_src'),
+                    $img->getAttribute('file'),
+                    $img->getAttribute('src'),
                 );
 
                 $src = array_filter($url);
